@@ -1,0 +1,154 @@
+<html>
+    <head>
+        <title>Solr Statistics Monitor</title>
+    </head>
+    <body>
+        <div>
+            <h2>Overview</h2>
+            <p>
+                Once the application has been compiled and the server started, the application can be accessed at:
+                <a href="http://localhost:9000" target="_blank">http://localhost:9000</a><br/>
+                Check in <a href="#run" class="shortcut">Run</a> to see the server status.
+			</p>
+			<p>
+                The application starts by displaying real-time statistics collected from an embedded 
+                <a href="http://lucene.apache.org/solr" target="_blank">Apache Solr</a>
+                server. The starting page will show a collection of charts that are updated periodically based
+                on a predefined interval. The charts shown on the starting page are related to Cache Statistics
+                that are collected by the Solr node; additional statistics are available by clicking the 
+                <strong>Query Stats</strong> tab. As Solr primarily records statistics only when there's an interaction with 
+                the core, a form is provided at the top of the page to simulate a query against the embedded 
+                server. When the query is issued against the embedded server, some of the graphs should be updated 
+                depending on the query that was submitted.
+			</p>
+			<p>
+                A toggle button is provided to pause the server side push of statistics data to the UI. Simply
+                push the button again to resume the flow of data to the front end.
+            </p>
+        </div>
+        
+        <div>
+        	<h2>Reactive Dashboard</h2>
+        	<p>
+        		The application attempts to demonstrate how the Play Framework can be used to create a
+        		dashboard application that showcases some of the key tenets of a Reactive Application. 
+        		The application, once started, establishes a WebSocket connection to the Server for the
+        		desired statistics type (e.g. CACHE or QUERYHANDLER). Behind the WebSocket connection is
+        		an Akka-based Actor, <a href="#code/app/actors/StatsActor.java" class="shortcut">StatsActor.java</a> 
+        		that fetches the statistics data from the embedded Solr server on the behalf of the user. 
+        		The returned statistics data is pushed to the browser on the output channel of the
+        		WebSocket connection. The use of a WebSocket connection between the browser and the backed 
+        		Play Framework application demonstrates a lightweight and efficient protocol for pushing 
+        		statistics information to the browser as it becomes available; the browser doesn't poll 
+        		the server for this information. 
+        	</p>
+        	<p>
+        		The application embraces a responsive design by ensuring that a dedicated actor services 
+        		the browser's initial connection by pushing retrieved statistics data  to it. More importantly,
+        		this direct connection ensures that there's a near constant response time for servicing 
+        		browser requests; in other words guaranteeing almost linear scalability of the application
+        		regardless of the number of browser applications requesting statistics data.
+        	</p>
+        	<p>
+        		A reactive interaction between the user (browser) and the application is demonstrated as in the 
+        		user's ability to pause/restart the flow of statistics data from the "backing" actor. The actor
+        		receives the asynchronous non-blocking request from the client to stop the flow of data from the
+        		dedicated actor. Such a request simply stops the actor, releasing system resources back to the
+        		server. Subsequent requests to start the actor simply schedules a new actor to start serving 
+        		new statistics data to the browser. The browser maintains the same WebSocket connection and as
+        		such is not aware of the intricacies of the underlying interaction between both tiers. The search 
+        		simulation use case also demonstrates a reactive interaction between the application and the user; 
+        		where a search request is simulated by the user to demonstrate a change in the statistical data 
+        		returned from the embedded Solr instance.  
+        	</p>
+        	<p>
+        		Finally the search simulation provides a responsive example where a user gets to interact with
+        		the Solr server by submitting a search query and the Play application <strong>reacts</strong> to 
+        		the search by pushing the updated statistics through the existing WebSocket connection.   
+        	</p>
+        </div>
+        
+        <div>
+        	<h2>Embedded Solr Server</h2>
+        	<p>
+        		A key component of the application is the embedded <a href="http://lucene.apache.org/solr" target="_blank">Solr</a> 
+        		Server that is the source for the statistical data that is displayed to the user. The Solr server is started 
+        		from the <a href="#code/app/Global.java" class="shortcut">Global.java</a> class. This class starts the
+        		embedded server on the defined port in the <a href="#code/conf/application.conf" class="shortcut">
+        		application.conf</a> file. The Solr server search index configurations are located ins the 
+        		<a href="#code/solrnode" class="shortcut">/solrnode</a> directory.
+        	</p> 
+        	<p>
+        		The embedded Solr server is pre-loaded with a Wikipedia export of a lists of various places
+        		in the world. The compressed XML file used to load the index has been included in the source at   
+        		<a href="#code/wikipedia-export.zip" class="shortcut">/wikipedia-export.zip</a>. This file can be 
+        		used to refresh the search index.
+        	</p>
+        </div>
+      
+        <div>
+        	<h2>Real-Time Charts</h2>
+        	<p>
+        		At the core of the client-side UI is the <a href="http://getbootstrap.com/" target="_blank">Twitter 
+        		Bootstrap</a> framework which is used to layout the page. On initial request of the application at 
+        		<a href="http://localhost:9000" target="_blank">http://localhost:9000</a>, the route specified in  
+				the <a href="#code/conf/routes" class="shortcut">routes</a> file at:
+				<pre><code>GET / controllers.Application.index</code></pre>
+				is invoked. This handler in  
+				<a href="#code/app/controllers/Application.java" class="shortcut">Application.java</a> will 
+				retrieve the statistic types for the <strong>CACHE</strong> statistics category. The statistics types 
+				are aggregated and passed into the <a href="#code/app/views/stats.scala.html" class="shortcut">
+				stats.scala.html</a> Scala template file. The page loads the CSS and JavaScript libraries 
+				needed to setup the interaction between the front-end and back-end services and specifies the region 
+				in which the dynamic content will reside. For each statistic type returned, a chart is rendered 
+				and prepared for receiving data.  
+			</p>
+			<p>
+				The UI uses JQuery for most JavaScript interactions. Once the page is loaded, the UI creates a WebSocket 
+				connection and submits it to the server along with the statistics category type at the route:
+				<pre><code>GET  /ws/:statType  controllers.Application.ws(statType : String)</code></pre> 
+				This route in the controller will initialize the actor represented by the 
+				<a href="#code/app/actors/StatsActor.java" class="shortcut"> StatsActor.java</a> class with the 
+				specific statistics category type. The actor is provided a reference to the WebSocket connection and 
+				from this point onwards will push statistics data retrieved from the Solr server through the connection 
+				in real-time. The actor is scheduled to run on a predefined interval that is configurable 
+				in the <a href="#code/conf/application.conf" class="shortcut"> application.conf</a> file.
+			</p>
+			<p>
+				The user has the ability to <strong>pause</strong> the flow of statistic data from the actor by clicking
+				on the <strong>pause</strong> button. This request is submitted over the existing WebSocket connection; 
+				as is the case for any interaction that needs to occur between the UI and the actor. A pause message sent 
+				to the actor simply cancels the actor, which releases any associated resources.  In the absence of data, 
+				the chart will no longer be updated as there is no data originating from the WebSocket connection. 
+				The state of the button is toggled such that a subsequent submit will <strong>resume</strong> the actor; 
+				simply starting another "cancellable" actor instance.
+			</p>
+			<p>
+				The UI uses the <a href="http://www.highcharts.com/" target="_blank">Highcharts</a> charting framework 
+				for displaying statistics data.  
+			</p>
+			<p>
+				NOTE: The application currently only supports two statistics category types: <strong>CACHE</strong> and 
+				<strong>QUERYHANDLER</strong>, but additional categories can be easily added.)
+			</p>
+		</div>
+         
+        <div>
+        	<h2>Search Simulation</h2>
+        	<p>
+        		As previously stated, the user has the ability to initiate search requests against the embedded Solr 
+        		server. The search requests are needed to allow the server to record new statistics information
+        		which can then be pushed out to the UI and displayed in the charts. A form is provided at the 
+        		top of the page that allows for basic queries to the submitted. 
+			</p>
+			<p>        		
+        		The searches provided through this form only impacts a few of the statistic types. As the embedded
+        		Solr server listens on a port that is readily accessible outside of the application, one can
+        		submit additional (more sophisticated) queries and updates that will impact more statistics type 
+        		displayed in UI. Please refer to the Solr Wiki for more information on 
+        		<a href="http://wiki.apache.org/solr/CommonQueryParameters" target="_blank">Querying</a> and 
+        		<a href="https://wiki.apache.org/solr/UpdateXmlMessages" target="_blank">Updating</a> a Solr index.
+			</p>
+		</div>
+    </body>
+</html>

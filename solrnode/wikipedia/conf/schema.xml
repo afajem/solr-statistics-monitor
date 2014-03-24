@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<schema name="example" version="1.5">
+ 
+ <fields>
+    <field name="_version_" type="tlong" indexed="true" stored="true" />
+    <field name="id"        type="string"  indexed="true" stored="true" required="true"/>
+    <field name="title"     type="string"  indexed="true" stored="false"/>
+    <field name="revision"  type="int"    indexed="true" stored="true"/>
+    <field name="user"      type="string"  indexed="true" stored="true"/>
+    <field name="userId"    type="int"     indexed="true" stored="true"/>
+    <field name="text"      type="text_en"    indexed="true" stored="false"/>
+    <field name="timestamp" type="date"    indexed="true" stored="true"/>
+    <field name="titleText" type="text_en"    indexed="true" stored="true"/>
+ </fields>
+
+
+ <uniqueKey>id</uniqueKey>
+
+ <copyField source="title" dest="titleText"/>
+
+ 
+  <types>
+    <fieldType name="string" class="solr.StrField" sortMissingLast="true" />
+    <fieldType name="int" class="solr.TrieIntField" precisionStep="0" positionIncrementGap="0"/>
+    <fieldType name="date" class="solr.TrieDateField" precisionStep="0" positionIncrementGap="0"/>
+    <fieldType name="tlong" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0"/>
+
+
+    <fieldType name="text_en" class="solr.TextField" positionIncrementGap="100">
+      <analyzer type="index">
+        <tokenizer class="solr.StandardTokenizerFactory"/>
+        <filter class="solr.StopFilterFactory"
+                ignoreCase="true"
+                words="lang/stopwords_en.txt"
+                enablePositionIncrements="true"
+                />
+        <filter class="solr.LowerCaseFilterFactory"/>
+	      <filter class="solr.EnglishPossessiveFilterFactory"/>
+        <filter class="solr.KeywordMarkerFilterFactory" protected="protwords.txt"/>
+        <filter class="solr.PorterStemFilterFactory"/>
+      </analyzer>
+      <analyzer type="query">
+        <tokenizer class="solr.StandardTokenizerFactory"/>
+        <filter class="solr.SynonymFilterFactory" synonyms="synonyms.txt" ignoreCase="true" expand="true"/>
+        <filter class="solr.StopFilterFactory"
+                ignoreCase="true"
+                words="lang/stopwords_en.txt"
+                enablePositionIncrements="true"
+                />
+        <filter class="solr.LowerCaseFilterFactory"/>
+	       <filter class="solr.EnglishPossessiveFilterFactory"/>
+        <filter class="solr.KeywordMarkerFilterFactory" protected="protwords.txt"/>
+        <filter class="solr.PorterStemFilterFactory"/>
+      </analyzer>
+    </fieldType>
+
+ </types>
+  
+
+</schema>

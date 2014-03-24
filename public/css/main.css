@@ -1,0 +1,10 @@
+.search-field-border {
+	border: 1px solid #cccccc;
+}
+.highlight-success {
+	border: 3px solid #00ff00;
+}
+
+.highlight-error {
+	border: 3px solid #ff0000;
+}

@@ -1,0 +1,18 @@
+# default message resource bundle
+
+# Global
+app.name=Solr Stats Monitor
+
+# Navigation 
+nav.menu.cache.stats=Cache Stats
+nav.menu.query.stats=Query Stats
+nav.menu.toggle=Toggle Navigation
+
+
+# Content Title
+content.title.cache.stats=Cache Statistics
+content.title.query.stats=Query Statistics
+
+# Graph 
+graph.pause.tooltip=Pause
+graph.play.tooltip=Resume

@@ -2,7 +2,7 @@
  
 ## Overview
             
-This is a Play Framework Activator Template that demonstrates a reactive dashboard which displays usage statistics data for an embedded [Apache Solr Server](http://lucene.apache.org/solr). To run the activator template you must have already installed the Type Activator. Please visit http://www.typesafe.com/platform/getstarted for more information on getting started.
+This is a Typesafe Activator Template that demonstrates a reactive dashboard which displays usage statistics data for an embedded [Apache Solr Server](http://lucene.apache.org/solr). To run the activator template you must have already installed the Type Activator. Please visit http://www.typesafe.com/platform/getstarted for more information on getting started.
 
 Once installed clone this repository and double click on the `activator` or `activator.bat` to run the template.
 

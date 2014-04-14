@@ -10,3 +10,4 @@
 /target
 /.idea/
 activator-sbt-*-shim.sbt
+/solrnode/wikipedia/data/index/write.lock

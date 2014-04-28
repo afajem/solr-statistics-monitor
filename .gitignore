@@ -3,7 +3,11 @@
 /.DS_Store
 /.settings
 /.target
+/.project
 /logs
 /project/project
 /project/target
 /target
+/.idea/
+activator-sbt-*-shim.sbt
+/solrnode/wikipedia/data/index/write.lock

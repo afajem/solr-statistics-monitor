@@ -1,29 +1,41 @@
 package controllers;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
-import models.Statistics;
-import play.Logger;
-import play.libs.Akka;
-import play.libs.F;
-import play.libs.Json;
-import play.libs.WS;
-import play.mvc.Controller;
-import play.mvc.Result;
-import play.mvc.WebSocket;
-import views.html.stats;
+import javax.inject.Inject;
+
 import actors.StatsActor;
+
 import akka.actor.ActorRef;
 import akka.actor.Props;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import models.Statistics;
+
+import play.Logger;
+import play.libs.Akka;
+import play.libs.Json;
+import play.libs.F.*;
+import play.libs.ws.*;
+import play.mvc.*;
+
+import scala.collection.JavaConverters;
+
+import services.EmbeddedServer;
+import views.html.stats;
+
 
 /**
  * The application controller
  */
-public class Application extends Controller {
+public class StatsController extends Controller {
+
+    @Inject WSClient ws;
+
+    @Inject EmbeddedServer embeddedServer;
 
     /**
      * Delegates to the common stats method requesting the Cache statistics
@@ -31,16 +43,17 @@ public class Application extends Controller {
      *
      * @return
      */
-	public static F.Promise<Result>  index() {
-	    return stats(StatisticsConstants.CACHE_STAT_TYPE);
+	public Promise<Result> index() {
+        return stats(StatisticsConstants.CACHE_STAT_TYPE);
 	}
 
-	
+
+
     /**
      * WebSocket endpoint that the browser will attach to for full duplexed communication
      * @return
      */
-    public static WebSocket<JsonNode> ws(final String statType) {
+    public WebSocket<JsonNode> ws(String statType) {
         
     	return new WebSocket<JsonNode>() {
             public void onReady(final WebSocket.In<JsonNode> in, final WebSocket.Out<JsonNode> out) {
@@ -53,10 +66,10 @@ public class Application extends Controller {
             		message = StatisticsConstants.QUERY_STATS_MESSAGE;
             	}
 
-                final ActorRef statsActor = Akka.system().actorOf(Props.create(StatsActor.class, out, message));
+                final ActorRef statsActor = Akka.system().actorOf(Props.create(StatsActor.class, out, message, ws));
 
                 // send all WebSocket message to actor
-                in.onMessage(new F.Callback<JsonNode>() {
+                in.onMessage(new Callback<JsonNode>() {
                     @Override
                     public void invoke(JsonNode jsonNode) throws Throwable {
                         String message = jsonNode.get("message").textValue();
@@ -67,7 +80,7 @@ public class Application extends Controller {
                 });
 
                 // on close, tell the stats actor to shutdown
-                in.onClose(new F.Callback0() {
+                in.onClose(new Callback0() {
                     @Override
                     public void invoke() throws Throwable {
                         Akka.system().stop(statsActor);
@@ -83,27 +96,25 @@ public class Application extends Controller {
      *
      * @return
      */
-	public static F.Promise<Result> simulateSearch(final String keywords) throws Exception {
+	public Promise<Result> simulateSearch(String keywords) throws Exception {
 	    
 		String query = StatisticsConstants.SOLR_QUERY_URL;
-		
-		final F.Promise<Result> resultPromise = WS.url(query)
-				.setQueryParameter("q", URLEncoder.encode(keywords, "UTF-8"))
-                .setQueryParameter("wt", "json").get().map(
-            new F.Function<WS.Response, Result>() {
-                public Result apply(WS.Response response) {
-                    JsonNode jsonNode = response.asJson();
-                    int status = jsonNode.findValue("status").asInt(BAD_REQUEST);
 
-                    if (status == 0) {
-                    	return ok();
-                    }
-                    else {
-                    	return internalServerError();
-                    }
-                }
+        WSRequest solrQueryRequest = ws.url(query)
+                .setQueryParameter("q", URLEncoder.encode(keywords, "UTF-8"))
+                .setQueryParameter("wt", "json");
+
+        Promise<Result> resultPromise = solrQueryRequest.get().map( response -> {
+            JsonNode jsonNode = response.asJson();
+            int status = jsonNode.findValue("status").asInt(BAD_REQUEST);
+
+            if (status == 0) {
+                return ok();
             }
-	    );
+            else {
+                return internalServerError();
+            }
+        });
 
 		return resultPromise;
 	}
@@ -114,7 +125,7 @@ public class Application extends Controller {
 	 * @param statType
 	 * @return
 	 */
-    public static F.Promise<Result> stats(String statType) {
+    public Promise<Result> stats(String statType) {
 
     	if (StatisticsConstants.CACHE_STAT_TYPE.equals(statType)) {
     		return fetchStats(StatisticsConstants.CACHE_STAT_CATEGORY, 
@@ -129,8 +140,8 @@ public class Application extends Controller {
 							StatisticsConstants.QUERY_PAGE_TITLE_KEY);
     	}
     	else {
-    		return F.Promise.promise(
-				new F.Function0<Result>() {
+    		return Promise.promise(
+				new Function0<Result>() {
 					public Result apply() {
 						return internalServerError("Unable to determine the requested statistics type");
 					}
@@ -149,37 +160,37 @@ public class Application extends Controller {
      * @param statPageTitle
      * @return
      */
-    private static F.Promise<Result> fetchStats (
+    private Promise<Result> fetchStats (
     	String statCategory, final List<String> statKeys, 
     	final String statType, final String statPageTitle) {
-    
-		final F.Promise<Result> resultPromise = WS.url(StatisticsConstants.SOLR_MBEAN_URL)
+
+        WSRequest mbeanRequest =  ws.url(StatisticsConstants.SOLR_MBEAN_URL)
                 .setQueryParameter("cat", statCategory)
                 .setQueryParameter("stats", "true")
-                .setQueryParameter("wt", "json").get().map(
-                new F.Function<WS.Response, Result>() {
-                    public Result apply(WS.Response response) {
-                        JsonNode jsonNode = response.asJson();
-                        int status = jsonNode.findValue("status").asInt(BAD_REQUEST);
+                .setQueryParameter("wt", "json");
 
-                        if (status == 0) {
-                            List<Statistics> statsList = new ArrayList<Statistics>();
-                            for (String statKey : statKeys) {
-                                Statistics stat =  extractStatistics(statKey, jsonNode);
+        Promise<Result> resultPromise = mbeanRequest.get().map(response -> {
+            JsonNode jsonNode = response.asJson();
+            int status = jsonNode.findValue("status").asInt(BAD_REQUEST);
 
-                                if (stat != null) {
-                                    statsList.add(stat);
-                                }
-                            }
+            if (status == 0) {
+                List<Statistics> statsList = new ArrayList<Statistics>();
+                for (String statKey : statKeys) {
+                    Statistics stat =  extractStatistics(statKey, jsonNode);
 
-                            return ok(stats.render(statType, statPageTitle, statsList));
-                        } else {
-                            return internalServerError();
-                        }
+                    if (stat != null) {
+                        statsList.add(stat);
                     }
                 }
-                );
-        
+                scala.collection.immutable.List<Statistics> scalaStatsList =
+                        JavaConverters.asScalaBufferConverter(statsList).asScala().toList();
+
+                return ok(stats.render(statType, statPageTitle, scalaStatsList));
+            } else {
+                return internalServerError();
+            }
+        });
+
 		return resultPromise;    	
     }
     
@@ -190,7 +201,7 @@ public class Application extends Controller {
      * @param responseJsonNode
      * @return
      */
-    private static Statistics extractStatistics(String statKey, JsonNode responseJsonNode) {
+    private Statistics extractStatistics(String statKey, JsonNode responseJsonNode) {
         JsonNode jsonNode = responseJsonNode.findValue(statKey);
 
         Statistics stat = null;

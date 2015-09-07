@@ -2,12 +2,17 @@
 /.classpath
 /.DS_Store
 /.settings
+/.sbtserver/
 /.target
 /.project
 /logs
 /project/project
 /project/target
+/project/.sbtserver
+/project/.sbtserver.lock
 /target
 /.idea/
 activator-sbt-*-shim.sbt
 /solrnode/wikipedia/data/index/write.lock
+play-fork-run.sbt
+sbt-ui.sbt

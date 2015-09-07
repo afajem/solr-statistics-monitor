@@ -73,7 +73,7 @@
         	<p>
         		A key component of the application is the embedded <a href="http://lucene.apache.org/solr" target="_blank">Solr</a> 
         		Server that is the source for the statistical data that is displayed to the user. The Solr server is started 
-        		from the <a href="#code/app/Global.java" class="shortcut">Global.java</a> class. This class starts the
+        		from the <a href="#code/app/services/SolrEmbeddedServer.java" class="shortcut">SolrEmbeddedServer.java</a> class. This class starts the
         		embedded server on the defined port in the <a href="#code/conf/application.conf" class="shortcut">
         		application.conf</a> file. The Solr server search index configurations are located ins the 
         		<a href="#code/solrnode" class="shortcut">/solrnode</a> directory.
@@ -93,9 +93,9 @@
         		Bootstrap</a> framework which is used to layout the page. On initial request of the application at 
         		<a href="http://localhost:9000" target="_blank">http://localhost:9000</a>, the route specified in  
 				the <a href="#code/conf/routes" class="shortcut">routes</a> file at:
-				<pre><code>GET / controllers.Application.index</code></pre>
+				<pre><code>GET / controllers.StatsController.index</code></pre>
 				is invoked. This handler in  
-				<a href="#code/app/controllers/Application.java" class="shortcut">Application.java</a> will 
+				<a href="#code/app/controllers/StatsController.java" class="shortcut">StatsController.java</a> will 
 				retrieve the statistic types for the <strong>CACHE</strong> statistics category. The statistics types 
 				are aggregated and passed into the <a href="#code/app/views/stats.scala.html" class="shortcut">
 				stats.scala.html</a> Scala template file. The page loads the CSS and JavaScript libraries 
@@ -106,7 +106,7 @@
 			<p>
 				The UI uses JQuery for most JavaScript interactions. Once the page is loaded, the UI creates a WebSocket 
 				connection and submits it to the server along with the statistics category type at the route:
-				<pre><code>GET  /ws/:statType  controllers.Application.ws(statType : String)</code></pre> 
+				<pre><code>GET  /ws/:statType  controllers.StatsController.ws(statType : String)</code></pre> 
 				This route in the controller will initialize the actor represented by the 
 				<a href="#code/app/actors/StatsActor.java" class="shortcut"> StatsActor.java</a> class with the 
 				specific statistics category type. The actor is provided a reference to the WebSocket connection and 

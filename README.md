@@ -25,7 +25,7 @@ Finally the search simulation provides a responsive example where a user gets to
 
 ## Embedded Solr Server
 
-A key component of the application is the embedded [Solr Server](http://lucene.apache.org/solr) that is the source for the statistical data that is displayed to the user. The Solr server is started from the [Global.java](app/Global.java) class. This class starts the embedded server on the defined port in the [application.conf](conf/application.conf) file. The Solr server search index configurations are located in the [solrnode](solrnode) directory.
+A key component of the application is the embedded [Solr Server](http://lucene.apache.org/solr) that is the source for the statistical data that is displayed to the user. The Solr server is started from the [SolrEmbeddedServer.java](app/services/SolrEmbeddedServer.java) class. This class starts the embedded server on the defined port in the [application.conf](conf/application.conf) file. The Solr server search index configurations are located in the [solrnode](solrnode) directory.
 
 The embedded Solr server is pre-loaded with a Wikipedia export of a lists of various places in the world. The compressed XML file used to load the index has been included in the source at [wikipedia-export.zip](wikipedia-export.zip). This file can be used to refresh the search index.
 

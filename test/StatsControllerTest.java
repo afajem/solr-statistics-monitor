@@ -1,4 +1,5 @@
-import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.*;
 
 import java.io.File;
 
@@ -15,10 +16,10 @@ import com.typesafe.config.ConfigFactory;
 
 
 /**
- * General Application tests
+ * General Stats Controller tests
  *
  */
-public class ApplicationTest extends Helpers {
+public class StatsControllerTest extends Helpers {
 	private Configuration additionalConfiguration;
 
 	@Before
@@ -33,10 +34,12 @@ public class ApplicationTest extends Helpers {
 	public void testSimulateSearch() {
 		running(testServer(9999, fakeApplication(additionalConfiguration.asMap())), new Runnable() {
 			public void run() {
-			    Result result = callAction(controllers.routes.ref.Application.simulateSearch(
-				    	Play.application().configuration().getString("test.query")));   
-				    
-			    assertThat(status(result)).isEqualTo(OK);
+
+				Result result =
+						route(controllers.routes.StatsController.simulateSearch(
+								Play.application().configuration().getString("test.query")));
+
+				assertThat(result.status(), equalTo(OK));
 			}
 		});
 	}	

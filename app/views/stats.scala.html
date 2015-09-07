@@ -1,12 +1,15 @@
+@import play.i18n._
+@import play.mvc.Http.Context.Implicit._
+
 @(statType: String, statPageTitle: String, stats: List[Statistics])
 
 @main(statType) {
 
 <div class="page-header">
-  	<h1>@Messages(statPageTitle)</h1>
+  	<h1>@Messages.get(statPageTitle)</h1>
 </div>
 
-<div id="charts" class="row" data-ws-url="@routes.Application.ws(statType).webSocketURL(request)">
+<div id="charts" class="row" data-ws-url="@routes.StatsController.ws(statType).webSocketURL(request)">
     @for(stat <- stats) {
         @chart(stat.key)(stat.name)
     }

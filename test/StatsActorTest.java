@@ -1,25 +1,25 @@
-import static org.fest.assertions.Assertions.assertThat;
+import static org.junit.Assert.*;
+import static org.hamcrest.CoreMatchers.*;
 
 import java.io.File;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
-import play.Configuration;
+import play.*;
 import play.Logger;
-import play.Play;
-import play.libs.Akka;
+import play.libs.*;
+import play.libs.ws.*;
 import play.test.Helpers;
 import actors.StatsActor;
-import akka.actor.ActorRef;
-import akka.actor.Props;
+import akka.actor.*;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.*;
 
 import controllers.StatisticsConstants;
+
+import javax.inject.Inject;
 
 
 /**
@@ -28,8 +28,7 @@ import controllers.StatisticsConstants;
  */
 public class StatsActorTest extends Helpers {
 	private Configuration additionalConfiguration;
-	
-	
+
 	@Before
 	public void init() {
 		Config testConfig =  ConfigFactory.parseFile(new File("conf/test.conf"));
@@ -45,8 +44,8 @@ public class StatsActorTest extends Helpers {
 	public void testQueryStats() {
 		running(testServer(9999, fakeApplication(additionalConfiguration.asMap())), new Runnable() {
 			public void run() {
-				validateStats(StatisticsConstants.QUERY_STATS_MESSAGE, 
-						StatisticsConstants.QUERY_STATS_KEYS, 
+				validateStats(StatisticsConstants.QUERY_STATS_MESSAGE,
+						StatisticsConstants.QUERY_STATS_KEYS,
 						StatisticsConstants.QUERY_STATS_FIELD_NAMES);
 			}
 		});
@@ -60,13 +59,12 @@ public class StatsActorTest extends Helpers {
 	public void testCacheStats() {
 		running(testServer(9999, fakeApplication(additionalConfiguration.asMap())), new Runnable() {
 			public void run() {
-				validateStats(StatisticsConstants.CACHE_STATS_MESSAGE, 
-						StatisticsConstants.CACHE_STATS_KEYS, 
+				validateStats(StatisticsConstants.CACHE_STATS_MESSAGE,
+						StatisticsConstants.CACHE_STATS_KEYS,
 						StatisticsConstants.CACHE_STATS_FIELD_NAMES);
 			}
 		});
 	}
-		
 
 
 	/**
@@ -78,7 +76,7 @@ public class StatsActorTest extends Helpers {
 		StubWebSocketOut out = new StubWebSocketOut();
 		
         ActorRef statsActor = Akka.system().actorOf(
-        		Props.create(StatsActor.class, out, statsMessage));
+        		Props.create(StatsActor.class, out, statsMessage, WS.client()));
 
          Logger.info("Sending test Statistic message targeted at [" + statsMessage + "]...");
          
@@ -96,7 +94,7 @@ public class StatsActorTest extends Helpers {
 		JsonNode node = out.getNode();
 		 
 		//Expecting data back for the query
-		assertThat(node).isNotNull();
+		assertThat(node, notNullValue());
 		
 		Logger.info("Received valid non-null results node for [" + statsMessage + "] sent to actor.");
 		
@@ -106,22 +104,24 @@ public class StatsActorTest extends Helpers {
 		Logger.info("Validating  statistics keys in  results node  for [" + statsMessage + "] match predefined values...");
 
 		for (JsonNode statKeyName : statKeyNames) {
-			assertThat(statsKeys.contains(statKeyName.asText())).isTrue();
+			assertTrue(statsKeys.contains(statKeyName.asText()));
 			Logger.info("Valid match found for statistics key: [" + statKeyName + "]");
 		}
 		
 		//Series points can't be null and must be an array format
 		JsonNode seriesPoints = node.get("seriesPoints");
 
-		assertThat(seriesPoints).isNotNull();
-		assertThat(seriesPoints.isArray()).isTrue();
+		Logger.debug("seriesPoints: " + seriesPoints);
+
+		assertThat(seriesPoints, notNullValue());
+		assertTrue(seriesPoints.isArray());
 		Logger.info("Received valid non-null list of SeriesPoints.");
 		
 		//Validate field names defined in config matches the response
 		Logger.info("Validating  statistics field names in each SeriesPoint matches predefined values...");
 
 		for (JsonNode seriesPointNode : seriesPoints) {
-			assertThat(statFieldNames.contains(seriesPointNode.get("title")));
+			assertTrue(statFieldNames.contains(seriesPointNode.get("title").textValue()));
 			Logger.info("Valid match found for statistics field name: [" + seriesPointNode.get("title") + "]");
 		}
 	}

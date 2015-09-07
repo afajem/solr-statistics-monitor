@@ -2,23 +2,19 @@ package actors;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
-import models.SeriesData;
-import models.SeriesPoint;
+import javax.inject.Inject;
+
+import akka.actor.*;
+import models.*;
 import play.Logger;
 import play.Play;
-import play.libs.Akka;
-import play.libs.F;
-import play.libs.Json;
-import play.libs.WS;
-import play.mvc.Result;
-import play.mvc.Results;
-import play.mvc.WebSocket;
+import play.libs.*;
+import play.libs.ws.*;
+import play.mvc.*;
+
 import scala.concurrent.duration.Duration;
-import akka.actor.Cancellable;
-import akka.actor.UntypedActor;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -31,6 +27,7 @@ import controllers.StatisticsConstants;
  * for pushing statistics data back to the browser.
  */
 public class StatsActor extends UntypedActor {
+    private final WSClient ws;
 
     private final WebSocket.Out<JsonNode> out;
 
@@ -45,15 +42,27 @@ public class StatsActor extends UntypedActor {
     private final String statsName;
 
 
+    /**
+     * Props for instantiating the actor
+     *
+     * @param out
+     */
+    public static Props props(ActorRef out) {
+        return Props.create(StatsActor.class, out);
+    }
+
 
     /**
      * Instantiates the actor, passing in the output channel of the web socket.
      *
      * @param out the WebSocket output channel to push result on.
      * @param statsName represents the message that will passed to the actor. Later used to determine the execution path
+     * @param ws the Web Service Client reference
      */
-    public StatsActor(WebSocket.Out<JsonNode> out, String statsName) {
+    @Inject
+    public StatsActor(WebSocket.Out<JsonNode> out, String statsName, WSClient ws) {
         this.out = out;
+        this.ws = ws;
 
         this.statsName = statsName;
 
@@ -128,59 +137,57 @@ public class StatsActor extends UntypedActor {
      *                       returning to the browser
      */
     private void processStatsMessage(String statCategory, final List<String> statKeys, final List<String> statFieldNames) {
-    	Logger.debug("Processing message for: " + statCategory + " on port " + 
-    			Play.application().configuration().getString("solr.port") + " for url: " + StatisticsConstants.SOLR_MBEAN_URL);
-    	
-        WS.url(StatisticsConstants.SOLR_MBEAN_URL)
+        Logger.debug("Processing message for: " + statCategory + " on port " +
+                Play.application().configuration().getString("solr.port") + " for url: " + StatisticsConstants.SOLR_MBEAN_URL);
+
+        WSRequest mbeanRequest =  ws.url(StatisticsConstants.SOLR_MBEAN_URL)
             .setQueryParameter("cat", statCategory)
             .setQueryParameter("stats", "true")
-            .setQueryParameter("wt", "json").get().map(
-            new F.Function<WS.Response, Object>() {
-                public Result apply(WS.Response response) {
+            .setQueryParameter("wt", "json");
 
-                	Logger.debug("Got response from Solr Query...");
-                	
-                    JsonNode jsonNode = response.asJson();
-                    int status = jsonNode.findValue("status").asInt();
+        mbeanRequest.get().map( response -> {
 
-                    if (status == 0) {
+            Logger.debug("Got response from Solr Query...");
 
-                        for (String statKey : statKeys) {
+            JsonNode jsonNode = response.asJson();
+            int status = jsonNode.findValue("status").asInt();
 
-                            //extract the stats node
-                            JsonNode cacheNode = jsonNode.findValue(statKey);
-                            JsonNode statsNode = cacheNode.findValue("stats");
+            if (status == 0) {
 
-                            //Add Timestamp
-                            long currentTime = System.currentTimeMillis();
+                for (String statKey : statKeys) {
 
-                            //Build chart data
-                            SeriesData seriesData = new SeriesData();
-                            seriesData.seriesName = statKey;
+                    //extract the stats node
+                    JsonNode cacheNode = jsonNode.findValue(statKey);
+                    JsonNode statsNode = cacheNode.findValue("stats");
 
-                            Iterator<String> iterator = statsNode.fieldNames();
-                            while (iterator.hasNext()) {
-                                String fieldName = iterator.next();
+                    //Add Timestamp
+                    long currentTime = System.currentTimeMillis();
 
-                                if (statFieldNames.contains(fieldName)) {
-                                    SeriesPoint seriesPoint = new SeriesPoint();
-                                    seriesPoint.title = fieldName;
-                                    seriesPoint.x = currentTime;
-                                    seriesPoint.y = Json.fromJson(statsNode.findValue(fieldName), Float.class);
+                    //Build chart data
+                    SeriesData seriesData = new SeriesData();
+                    seriesData.seriesName = statKey;
 
-                                    //Add the point to the series data
-                                    seriesData.seriesPoints.add(seriesPoint);
-                                }
-                            }
+                    Iterator<String> iterator = statsNode.fieldNames();
+                    while (iterator.hasNext()) {
+                        String fieldName = iterator.next();
 
-                            out.write(Json.toJson(seriesData));
+                        if (statFieldNames.contains(fieldName)) {
+                            SeriesPoint seriesPoint = new SeriesPoint();
+                            seriesPoint.title = fieldName;
+                            seriesPoint.x = currentTime;
+                            seriesPoint.y = Json.fromJson(statsNode.findValue(fieldName), Float.class);
 
+                            //Add the point to the series data
+                            seriesData.seriesPoints.add(seriesPoint);
                         }
-                }
+                    }
 
-                return Results.ok();
+                    out.write(Json.toJson(seriesData));
+
+                }
             }
-        }
-        );
+
+            return response.asJson();
+        });
     }
 }

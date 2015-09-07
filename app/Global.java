@@ -17,7 +17,7 @@ public class Global extends GlobalSettings {
      */
     @Override
     public void onStart(Application app) {
-
+/*
         Logger.info("Starting embedded Solr server...");
 
         try {
@@ -34,6 +34,7 @@ public class Global extends GlobalSettings {
         Logger.info("Embedded Solr server initialized.");
 
         Logger.info("Application has started");
+        */
     }
 
 
@@ -43,7 +44,7 @@ public class Global extends GlobalSettings {
      */
     @Override
     public void onStop(Application app) {
-
+/*
         if (solrRunner != null && solrRunner.isRunning()) {
             try {
                 solrRunner.stop();
@@ -54,6 +55,7 @@ public class Global extends GlobalSettings {
         }
 
         Logger.info("Application shutdown...");
+*/
     }
 
 }

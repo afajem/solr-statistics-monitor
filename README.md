@@ -2,7 +2,7 @@
  
 ## Overview
             
-This is a Typesafe Activator Template that demonstrates a reactive dashboard which displays usage statistics data for an embedded [Apache Solr Server](http://lucene.apache.org/solr). To run the activator template you must have already installed the Type Activator. Please visit http://www.typesafe.com/platform/getstarted for more information on getting started.
+This is a Typesafe Activator Template that demonstrates a reactive dashboard, which displays usage statistics data for an embedded [Apache Solr Server](http://lucene.apache.org/solr). To run the activator template you must have already installed the Type Activator. Please visit http://www.typesafe.com/platform/getstarted for more information on getting started.
 
 Once installed clone this repository and double click on the `activator` or `activator.bat` to run the template.
 
@@ -31,7 +31,7 @@ The embedded Solr server is pre-loaded with a Wikipedia export of a lists of var
 
 ## Real-Time Charts
 
-At the core of the client-side UI is the [Twitter Bootstrap](http://getbootstrap.com/) framework which is used to layout the page. On initial request of the application at [http://localhost:9000](http://localhost:9000), the route specified in the [routes](conf/routes) file at: ``GET / controllers.Application.index`` is invoked. This handler in [Application.java](app/controllers/Application.java) will retrieve the statistic types for the **CACHE** statistics category. The statistics types are aggregated and passed into the [stats.scala.html](app/views/stats.scala.html) Scala template file. The page loads the CSS and JavaScript libraries needed to setup the interaction between the front-end and back-end services and specifies the region in which the dynamic content will reside. For each statistic type returned, a chart is rendered and prepared for receiving data.  
+At the core of the client-side UI is the [Twitter Bootstrap](http://getbootstrap.com/) framework which is used to layout the page. On initial request of the application at [http://localhost:9000](http://localhost:9000), the route specified in the [routes](conf/routes) file at: ``GET / controllers.Application.index`` is invoked. This handler in [StatsController.java](app/controllers/StatsController.java) will retrieve the statistic types for the **CACHE** statistics category. The statistics types are aggregated and passed into the [stats.scala.html](app/views/stats.scala.html) Scala template file. The page loads the CSS and JavaScript libraries needed to setup the interaction between the front-end and back-end services and specifies the region in which the dynamic content will reside. For each statistic type returned, a chart is rendered and prepared for receiving data.  
 
 The UI uses JQuery for most JavaScript interactions. Once the page is loaded, the UI creates a WebSocket connection and submits it to the server along with the statistics category type at the route: ``GET  /ws/:statType  controllers.Application.ws(statType : String)``. This route in the controller will initialize the actor represented by the [StatsActor.java](app/actors/StatsActor.java) class with the specific statistics category type. The actor is provided a reference to the WebSocket connection and from this point onwards will push statistics data retrieved from the Solr server through the connection in real-time. The actor is scheduled to run on a predefined interval that is configurable in the [application.conf](conf/application.conf) file. 
 

@@ -4,6 +4,8 @@
             
 This is a Typesafe Activator Template that demonstrates a reactive dashboard, which displays usage statistics data for an embedded [Apache Solr Server](http://lucene.apache.org/solr). To run the activator template you must have already installed the Type Activator. Please visit http://www.typesafe.com/platform/getstarted for more information on getting started.
 
+**NOTE**: The Typesafe Activator version supported by this template requires JDK 1.8 (or later). To avoid potential compilation and runtime errors, please update your JDK accordingly.
+
 Once installed clone this repository and double click on the `activator` or `activator.bat` to run the template.
 
 The application, once compiled and running at [http://localhost:9000](http://localhost:9000), starts by displaying real-time statistics collected from an embedded [Apache Solr Server](http://lucene.apache.org/solr). The starting page will show a collection of charts that are updated periodically based on a predefined interval. The charts shown on the starting page are related to Cache Statistics that are collected by the Solr node; additional statistics are available by clicking the **Query Stats** tab. 
